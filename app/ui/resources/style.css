@@ -1,0 +1,194 @@
+/* Project Launcher Theme - Based on Ben Foggon's website */
+
+/* Main colors */
+:root {
+    --primary-color: #9370DB;        /* Medium Purple */
+    --primary-light: #C3B1E1;        /* Light Purple */
+    --primary-dark: #6A5ACD;         /* Slate Blue */
+    --accent-color: #8A2BE2;         /* Violet */
+    --background: #1E1E2E;           /* Dark background */
+    --card-background: #2D2D44;      /* Slightly lighter background for cards */
+    --text-color: #E6E6FA;           /* Lavender - light text color */
+    --text-secondary: #B8B8D1;       /* Secondary text color */
+    --success-color: #27AE60;        /* Green */
+    --warning-color: #F39C12;        /* Orange */
+    --error-color: #E74C3C;          /* Red */
+}
+
+/* QWidget styling */
+QWidget {
+    background-color: var(--background);
+    color: var(--text-color);
+    font-family: 'Segoe UI', Arial, sans-serif;
+}
+
+/* Main window */
+QMainWindow {
+    background-color: var(--background);
+}
+
+/* Frames and cards */
+QFrame {
+    border-radius: 10px;
+    background-color: var(--card-background);
+}
+
+/* Button styling */
+QPushButton {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    text-align: center;
+    font-weight: bold;
+}
+
+QPushButton:hover {
+    background-color: var(--primary-light);
+}
+
+QPushButton:pressed {
+    background-color: var(--primary-dark);
+}
+
+QPushButton:disabled {
+    background-color: #5D5D7A;
+    color: #9898B5;
+}
+
+/* Large action button (like launch) */
+QPushButton#launchButton {
+    background-color: var(--accent-color);
+    color: white;
+    font-size: 16px;
+    padding: 12px 24px;
+}
+
+QPushButton#launchButton:hover {
+    background-color: #9A40F2;
+}
+
+QPushButton#launchButton:pressed {
+    background-color: #7A20D2;
+}
+
+/* Input fields */
+QLineEdit, QTextEdit, QComboBox {
+    background-color: #3A3A5E;
+    color: var(--text-color);
+    border: 1px solid #4A4A70;
+    border-radius: 5px;
+    padding: 5px;
+}
+
+QLineEdit:focus, QTextEdit:focus, QComboBox:focus {
+    border: 1px solid var(--primary-color);
+}
+
+/* List widgets */
+QListWidget {
+    background-color: #3A3A5E;
+    border-radius: 6px;
+    padding: 5px;
+}
+
+QListWidget::item {
+    border-radius: 4px;
+    padding: 4px;
+    margin: 2px 0;
+}
+
+QListWidget::item:selected {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+QListWidget::item:hover:!selected {
+    background-color: #4A4A70;
+}
+
+/* Progress bar */
+QProgressBar {
+    border: none;
+    border-radius: 3px;
+    background-color: #3A3A5E;
+    text-align: center;
+    color: white;
+}
+
+QProgressBar::chunk {
+    background-color: var(--primary-color);
+    border-radius: 3px;
+}
+
+/* Tab widgets */
+QTabWidget::pane {
+    border: 1px solid #4A4A70;
+    border-radius: 6px;
+}
+
+QTabBar::tab {
+    background-color: #3A3A5E;
+    color: var(--text-color);
+    border-top-left-radius: 6px;
+    border-top-right-radius: 6px;
+    padding: 8px 16px;
+    margin-right: 2px;
+}
+
+QTabBar::tab:selected {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+QTabBar::tab:!selected:hover {
+    background-color: #4A4A70;
+}
+
+/* Scroll bars */
+QScrollBar:vertical {
+    border: none;
+    background-color: #3A3A5E;
+    width: 12px;
+    border-radius: 6px;
+}
+
+QScrollBar::handle:vertical {
+    background-color: var(--primary-color);
+    border-radius: 6px;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    border: none;
+    background: none;
+}
+
+/* Menubar and menus */
+QMenuBar {
+    background-color: var(--background);
+    color: var(--text-color);
+}
+
+QMenuBar::item:selected {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+QMenu {
+    background-color: var(--card-background);
+    color: var(--text-color);
+    border: 1px solid #4A4A70;
+    border-radius: 6px;
+}
+
+QMenu::item:selected {
+    background-color: var(--primary-color);
+    color: white;
+}
+
+/* Status bar */
+QStatusBar {
+    background-color: var(--card-background);
+    color: var(--text-secondary);
+}

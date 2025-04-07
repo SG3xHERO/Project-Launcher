@@ -1,0 +1,22 @@
+{
+    "minecraft_directory": "C:\\Users\\benf\\AppData\\Roaming\\.minecraft",
+    "minecraft_version": "1.21.5",
+    "java_path": "C:\\Program Files\\Java\\jre1.8.0_441\\bin\\javaw.exe",
+    "java_args": "-Xmx15G -XX:+UseG1GC -XX:+ParallelRefProcEnabled",
+    "modpack_repositories": [
+        "https://example.com/modpacks/official"
+    ],
+    "check_for_updates": true,
+    "max_download_threads": 3,
+    "launcher_theme": "default",
+    "first_run": true,
+    "repositories": {
+        "official": {
+            "name": "Official Repository",
+            "url": "https://example.com/launcher/modpacks",
+            "api_url": "https://example.com/launcher/api",
+            "enabled": true
+        }
+    },
+    "check_for_modpack_updates": true
+}
