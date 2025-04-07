@@ -1,0 +1,20 @@
+[
+    {
+        "author": "Ben Foggon",
+        "created_at": "2025-04-07T10:35:00.356969",
+        "description": "A simple test modpack to verify the server is working correctly.",
+        "download_count": 1,
+        "download_url": "/api/modpacks/test_modpack/download",
+        "file_hash": "001b0d73dcf9c955fd52b4f32149356161ee3ae5996c1b665315d672f0ef1acb",
+        "file_size": 931,
+        "id": "test_modpack",
+        "mc_versions": [
+            "1.19.4",
+            "1.20.1"
+        ],
+        "mod_count": 2,
+        "name": "Test Modpack",
+        "updated_at": "2025-04-07T10:35:00.357078",
+        "version": "1.0.0"
+    }
+]

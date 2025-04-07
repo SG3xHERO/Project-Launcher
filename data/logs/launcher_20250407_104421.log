@@ -1,0 +1,10 @@
+2025-04-07 10:44:21,767 [INFO] Logging to data\logs\launcher_20250407_104421.log
+2025-04-07 10:44:21,888 [INFO] System: Windows 11
+2025-04-07 10:44:21,889 [INFO] Python: 3.13.2
+2025-04-07 10:44:21,889 [INFO] Starting Minecraft Modpack Launcher...
+2025-04-07 10:44:21,890 [INFO] Configuration loaded from data\config.json
+2025-04-07 10:44:22,089 [INFO] Java version: 1.8.0_441
+2025-04-07 10:44:27,469 [ERROR] Failed to update repository Official Repository: 404 Client Error: Not Found for url: https://example.com/launcher/modpacks/api/modpacks
+2025-04-07 10:44:34,922 [INFO] Configuration saved to data\config.json
+2025-04-07 10:44:36,999 [INFO] Configuration saved to data\config.json
+2025-04-07 10:44:37,000 [INFO] Repository Official Repository updated successfully with 1 modpacks

@@ -35,7 +35,7 @@ class Config:
             return False
             
         try:
-            with open(self.config_path, "r") as f:
+            with open(self.config_path, "r", encoding="utf-8") as f:
                 self.config = json.load(f)
             logging.info(f"Configuration loaded from {self.config_path}")
             return True
@@ -53,7 +53,7 @@ class Config:
             # Ensure directory exists
             os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
             
-            with open(self.config_path, "w") as f:
+            with open(self.config_path, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=4)
             logging.info(f"Configuration saved to {self.config_path}")
             return True
@@ -68,9 +68,14 @@ class Config:
             "minecraft_version": "1.19.4",
             "java_path": self._get_default_java_path(),
             "java_args": "-Xmx2G -XX:+UseG1GC -XX:+ParallelRefProcEnabled",
-            "modpack_repositories": [
-                "https://example.com/modpacks/official"
-            ],
+            "server_url": "http://localhost:5000",
+            "repositories": {
+                "default": {
+                    "name": "Default Repository",
+                    "url": "http://localhost:5000",
+                    "enabled": True
+                }
+            },
             "check_for_updates": True,
             "max_download_threads": 3,
             "launcher_theme": "default",
@@ -125,6 +130,16 @@ class Config:
         """
         # Try to find Java in common locations
         if os.name == "nt":  # Windows
+            # First, try to run where java
+            try:
+                import subprocess
+                result = subprocess.run(["where", "java"], capture_output=True, text=True, check=False)
+                if result.returncode == 0 and result.stdout.strip():
+                    return result.stdout.splitlines()[0].strip()
+            except Exception:
+                pass
+                
+            # Try common installation paths
             for program_files in ["Program Files", "Program Files (x86)"]:
                 java_path = os.path.join("C:\\", program_files, "Java")
                 if os.path.exists(java_path):
@@ -132,10 +147,10 @@ class Config:
                     java_versions = [d for d in os.listdir(java_path) if d.startswith("jre") or d.startswith("jdk")]
                     if java_versions:
                         newest_version = sorted(java_versions)[-1]
-                        return os.path.join(java_path, newest_version, "bin", "javaw.exe")
+                        return os.path.join(java_path, newest_version, "bin", "java.exe")
             
             # If not found, return default command which will use PATH
-            return "javaw"
+            return "java.exe"
         else:  # Linux, macOS, etc.
             # Try to find Java using 'which'
             try:

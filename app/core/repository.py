@@ -3,6 +3,7 @@
 
 """
 Repository management for the Minecraft Modpack Launcher.
+Modified to work with the custom modpack server.
 """
 
 import os
@@ -10,6 +11,7 @@ import json
 import logging
 import requests
 import tempfile
+import platform
 import time
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Tuple
@@ -24,7 +26,6 @@ class Repository:
     
     name: str
     url: str
-    api_url: str
     enabled: bool = True
     auth_token: Optional[str] = None
     last_updated: int = 0  # Unix timestamp
@@ -37,8 +38,8 @@ class Repository:
         Returns:
             bool: True if repository needs update, False otherwise.
         """
-        # Update if last update was more than 24 hours ago
-        return time.time() - self.last_updated > 86400
+        # Update if last update was more than 1 hour ago
+        return time.time() - self.last_updated > 3600
 
 
 class RepositoryManager:
@@ -68,15 +69,18 @@ class RepositoryManager:
         
         # Add default repository if none configured
         if not repo_data:
+            # Use localhost for development, would be a real server URL in production
+            server_url = self.config.get("server_url", "http://localhost:5000")
+            
             repo_data = {
-                "official": {
-                    "name": "Official Repository",
-                    "url": "https://example.com/launcher/modpacks",
-                    "api_url": "https://example.com/launcher/api",
+                "default": {
+                    "name": "Default Repository",
+                    "url": server_url,
                     "enabled": True
                 }
             }
             self.config.set("repositories", repo_data)
+            self.config.set("server_url", server_url)
             self.config.save()
             
         # Create Repository instances
@@ -84,7 +88,6 @@ class RepositoryManager:
             repositories[repo_id] = Repository(
                 name=repo_info.get("name", repo_id),
                 url=repo_info.get("url", ""),
-                api_url=repo_info.get("api_url", ""),
                 enabled=repo_info.get("enabled", True),
                 auth_token=repo_info.get("auth_token"),
                 last_updated=repo_info.get("last_updated", 0),
@@ -101,7 +104,6 @@ class RepositoryManager:
             repo_data[repo_id] = {
                 "name": repo.name,
                 "url": repo.url,
-                "api_url": repo.api_url,
                 "enabled": repo.enabled,
                 "auth_token": repo.auth_token,
                 "last_updated": repo.last_updated,
@@ -111,13 +113,12 @@ class RepositoryManager:
         self.config.set("repositories", repo_data)
         self.config.save()
         
-    def add_repository(self, name: str, url: str, api_url: Optional[str] = None) -> bool:
+    def add_repository(self, name: str, url: str) -> bool:
         """Add a repository.
         
         Args:
             name (str): Repository name.
             url (str): Repository URL.
-            api_url (Optional[str]): Repository API URL.
             
         Returns:
             bool: True if repository was added successfully, False otherwise.
@@ -133,7 +134,6 @@ class RepositoryManager:
         self.repositories[repo_id] = Repository(
             name=name,
             url=url,
-            api_url=api_url or url,
             enabled=True,
             last_updated=0
         )
@@ -203,7 +203,7 @@ class RepositoryManager:
             
         try:
             # Build API URL
-            api_url = f"{repo.api_url}/modpacks"
+            api_url = f"{repo.url}/api/modpacks"
             
             # Set up headers
             headers = {}
@@ -218,7 +218,7 @@ class RepositoryManager:
             data = response.json()
             
             if not isinstance(data, list):
-                logging.error(f"Invalid response from repository {repo.name}: expected list, got {type(data)}")
+                logging.error(f"Invalid response from repository {repo.name}: expected list")
                 return False
                 
             # Update repository data
@@ -233,7 +233,7 @@ class RepositoryManager:
             # Save repositories
             self._save_repositories()
             
-            logging.info(f"Repository {repo.name} updated successfully")
+            logging.info(f"Repository {repo.name} updated successfully with {len(data)} modpacks")
             return True
             
         except Exception as e:
@@ -332,7 +332,7 @@ class RepositoryManager:
         # If not found, try to fetch directly from the API
         try:
             # Build API URL
-            api_url = f"{repo.api_url}/modpacks/{modpack_id}"
+            api_url = f"{repo.url}/api/modpacks/{modpack_id}"
             
             # Set up headers
             headers = {}
@@ -392,7 +392,7 @@ class RepositoryManager:
             
         # If download URL is relative, make it absolute
         if not download_url.startswith("http"):
-            download_url = f"{repo.url}/{download_url.lstrip('/')}"
+            download_url = f"{repo.url}{download_url}"
             
         try:
             # Set up headers
@@ -425,6 +425,18 @@ class RepositoryManager:
             if progress_callback:
                 progress_callback(1.0)  # 100% complete
                 
+            # Verify hash if provided
+            file_hash = modpack_details.get("file_hash")
+            if file_hash:
+                from app.utils import calculate_checksum
+                actual_hash = calculate_checksum(target_path, "sha256")
+                
+                if actual_hash != file_hash:
+                    logging.warning(f"Hash mismatch for {modpack_id}")
+                    logging.warning(f"Expected: {file_hash}")
+                    logging.warning(f"Got: {actual_hash}")
+                    # Continue anyway, as the server might have updated the modpack
+                
             logging.info(f"Modpack {modpack_details.get('name', modpack_id)} downloaded successfully")
             return True
             
@@ -435,4 +447,47 @@ class RepositoryManager:
             if os.path.exists(target_path):
                 os.remove(target_path)
                 
+            return False
+    
+    def get_modpack_icon(self, repo_id: str, modpack_id: str, target_path: str) -> bool:
+        """Download modpack icon.
+        
+        Args:
+            repo_id (str): Repository ID.
+            modpack_id (str): Modpack ID.
+            target_path (str): Path to save downloaded icon.
+            
+        Returns:
+            bool: True if download was successful, False otherwise.
+        """
+        repo = self.repositories.get(repo_id)
+        
+        if not repo or not repo.enabled:
+            logging.warning(f"Repository with ID {repo_id} not found or disabled")
+            return False
+            
+        # Build icon URL
+        icon_url = f"{repo.url}/api/modpacks/{modpack_id}/icon"
+        
+        try:
+            # Download icon
+            response = requests.get(icon_url, timeout=10)
+            
+            # If icon doesn't exist, return False
+            if response.status_code == 404:
+                return False
+                
+            response.raise_for_status()
+            
+            # Ensure target directory exists
+            os.makedirs(os.path.dirname(target_path), exist_ok=True)
+            
+            # Save icon
+            with open(target_path, 'wb') as f:
+                f.write(response.content)
+                
+            return True
+            
+        except Exception as e:
+            logging.error(f"Failed to download icon for modpack {modpack_id}: {e}")
             return False

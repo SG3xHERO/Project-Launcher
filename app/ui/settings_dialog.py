@@ -8,16 +8,86 @@ Settings dialog for the Minecraft Modpack Launcher.
 import os
 import logging
 from PyQt6.QtWidgets import (
-    QDialog, QWidget, QVBoxLayout, QHBoxLayout, 
-    QPushButton, QLabel, QLineEdit, QCheckBox,
-    QSpinBox, QTabWidget, QFileDialog, QDialogButtonBox,
-    QGroupBox, QFormLayout, QComboBox
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
+    QLineEdit, QPushButton, QTabWidget, QWidget,
+    QFormLayout, QMessageBox, QCheckBox
 )
 from PyQt6.QtCore import Qt, QSettings
-from PyQt6.QtGui import QIcon, QFont
 
-from app.utils import is_java_installed, get_memory_info, calculate_recommended_memory
+class ModernLineEdit(QLineEdit):
+    """Modern styled line edit with rounded corners."""
+    
+    def __init__(self, placeholder="", parent=None):
+        super().__init__(parent)
+        self.setFixedHeight(40)
+        self.setPlaceholderText(placeholder)
+        self.setStyleSheet("""
+            QLineEdit {
+                background-color: #2B3142;
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+            QLineEdit:focus {
+                background-color: #323848;
+            }
+        """)
 
+class ModernButton(QPushButton):
+    """Modern styled button with rounded corners and hover effects."""
+    
+    def __init__(self, text, accent=False, parent=None):
+        super().__init__(text, parent)
+        self.accent = accent
+        self.setFixedHeight(40)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        
+        # Set style based on button type
+        if accent:
+            self.setStyleSheet("""
+                QPushButton {
+                    background-color: #E61B72;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 10px 20px;
+                    font-size: 14px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background-color: #F32A81;
+                }
+                QPushButton:pressed {
+                    background-color: #D10A61;
+                }
+                QPushButton:disabled {
+                    background-color: #444B5A;
+                    color: #8D93A0;
+                }
+            """)
+        else:
+            self.setStyleSheet("""
+                QPushButton {
+                    background-color: #2B3142;
+                    color: white;
+                    border: none;
+                    border-radius: 6px;
+                    padding: 10px 20px;
+                    font-size: 14px;
+                }
+                QPushButton:hover {
+                    background-color: #363D51;
+                }
+                QPushButton:pressed {
+                    background-color: #222736;
+                }
+                QPushButton:disabled {
+                    background-color: #232734;
+                    color: #6D727E;
+                }
+            """)
 
 class SettingsDialog(QDialog):
     """Settings dialog for the Minecraft Modpack Launcher."""
@@ -37,9 +107,53 @@ class SettingsDialog(QDialog):
     def init_ui(self):
         """Initialize user interface."""
         self.setWindowTitle("Settings")
-        self.setMinimumWidth(600)
+        self.setMinimumWidth(500)
+        self.setStyleSheet("""
+            QDialog {
+                background-color: #1A1C23;
+                color: white;
+                font-family: 'Segoe UI', Arial, sans-serif;
+            }
+            QTabWidget::pane {
+                border: none;
+                background-color: #1A1C23;
+            }
+            QTabBar::tab {
+                background-color: #2B3142;
+                color: white;
+                border-top-left-radius: 6px;
+                border-top-right-radius: 6px;
+                min-width: 100px;
+                padding: 8px 16px;
+                margin-right: 4px;
+            }
+            QTabBar::tab:selected {
+                background-color: #E61B72;
+            }
+            QTabBar::tab:hover:!selected {
+                background-color: #363D51;
+            }
+            QLabel {
+                color: white;
+            }
+            QCheckBox {
+                color: white;
+            }
+            QCheckBox::indicator {
+                width: 18px;
+                height: 18px;
+                border-radius: 3px;
+                background-color: #2B3142;
+            }
+            QCheckBox::indicator:checked {
+                background-color: #E61B72;
+                image: url('app/ui/resources/checkmark.png');
+            }
+        """)
         
         layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(15)
         
         # Create tab widget
         self.tab_widget = QTabWidget()
@@ -47,154 +161,190 @@ class SettingsDialog(QDialog):
         # General settings tab
         self.general_tab = QWidget()
         general_layout = QVBoxLayout(self.general_tab)
-        
-        # Minecraft directory
-        mc_group = QGroupBox("Minecraft Directory")
-        mc_layout = QHBoxLayout(mc_group)
-        
-        self.mc_dir_edit = QLineEdit()
-        mc_layout.addWidget(self.mc_dir_edit)
-        
-        browse_btn = QPushButton("Browse...")
-        browse_btn.clicked.connect(self.browse_minecraft_dir)
-        mc_layout.addWidget(browse_btn)
-        
-        general_layout.addWidget(mc_group)
-        
-        # Java settings
-        java_group = QGroupBox("Java Settings")
-        java_layout = QFormLayout(java_group)
-        
-        # Java path
-        self.java_path_edit = QLineEdit()
-        java_layout.addRow("Java Path:", self.java_path_edit)
-        
-        # Java memory
-        memory_layout = QHBoxLayout()
-        self.memory_edit = QLineEdit()
-        memory_layout.addWidget(self.memory_edit)
-        
-        detect_btn = QPushButton("Auto-detect")
-        detect_btn.clicked.connect(self.auto_detect_memory)
-        memory_layout.addWidget(detect_btn)
-        
-        java_layout.addRow("Memory Allocation:", memory_layout)
-        
-        # Java arguments
-        self.java_args_edit = QLineEdit()
-        java_layout.addRow("Additional Arguments:", self.java_args_edit)
-        
-        general_layout.addWidget(java_group)
-        
-        # Updates
-        update_group = QGroupBox("Updates")
-        update_layout = QVBoxLayout(update_group)
-        
-        self.check_updates_cb = QCheckBox("Check for updates on startup")
-        update_layout.addWidget(self.check_updates_cb)
-        
-        self.check_modpack_updates_cb = QCheckBox("Check for modpack updates on startup")
-        update_layout.addWidget(self.check_modpack_updates_cb)
-        
-        general_layout.addWidget(update_group)
-        
-        # Download settings tab
-        self.download_tab = QWidget()
-        download_layout = QVBoxLayout(self.download_tab)
+        general_layout.setContentsMargins(20, 20, 20, 20)
+        general_layout.setSpacing(15)
         
         # Repository settings
-        repo_group = QGroupBox("Modpack Repositories")
-        repo_layout = QVBoxLayout(repo_group)
+        repository_form = QFormLayout()
+        repository_form.setSpacing(10)
         
-        # TODO: Add repository list widget
-        repo_layout.addWidget(QLabel("Repository settings will be added here"))
+        self.repo_url_edit = ModernLineEdit(placeholder="https://example.com:5000")
+        repository_form.addRow("Repository URL:", self.repo_url_edit)
         
-        download_layout.addWidget(repo_group)
+        repo_test_layout = QHBoxLayout()
+        self.test_repo_btn = ModernButton("Test Connection")
+        self.test_repo_btn.clicked.connect(self.test_repository)
+        repo_test_layout.addWidget(self.test_repo_btn)
+        repo_test_layout.addStretch()
         
-        # Download settings
-        dl_group = QGroupBox("Download Settings")
-        dl_layout = QFormLayout(dl_group)
+        repository_form.addRow("", repo_test_layout)
+        general_layout.addLayout(repository_form)
         
-        self.max_threads_spin = QSpinBox()
-        self.max_threads_spin.setMinimum(1)
-        self.max_threads_spin.setMaximum(16)
-        dl_layout.addRow("Maximum download threads:", self.max_threads_spin)
+        # Minecraft settings
+        minecraft_form = QFormLayout()
+        minecraft_form.setSpacing(10)
         
-        download_layout.addWidget(dl_group)
+        self.minecraft_dir_edit = ModernLineEdit()
+        minecraft_form.addRow("Minecraft Directory:", self.minecraft_dir_edit)
+        
+        mc_dir_layout = QHBoxLayout()
+        self.browse_mc_dir_btn = ModernButton("Browse...")
+        self.browse_mc_dir_btn.clicked.connect(self.browse_minecraft_dir)
+        mc_dir_layout.addWidget(self.browse_mc_dir_btn)
+        mc_dir_layout.addStretch()
+        
+        minecraft_form.addRow("", mc_dir_layout)
+        general_layout.addLayout(minecraft_form)
+        
+        # Update settings
+        self.check_updates_cb = QCheckBox("Check for updates on startup")
+        general_layout.addWidget(self.check_updates_cb)
+        
+        general_layout.addStretch(1)
+        
+        # Java settings tab
+        self.java_tab = QWidget()
+        java_layout = QVBoxLayout(self.java_tab)
+        java_layout.setContentsMargins(20, 20, 20, 20)
+        java_layout.setSpacing(15)
+        
+        # Java path
+        java_form = QFormLayout()
+        java_form.setSpacing(10)
+        
+        self.java_path_edit = ModernLineEdit()
+        java_form.addRow("Java Path:", self.java_path_edit)
+        
+        java_path_layout = QHBoxLayout()
+        self.browse_java_btn = ModernButton("Browse...")
+        self.browse_java_btn.clicked.connect(self.browse_java_path)
+        java_path_layout.addWidget(self.browse_java_btn)
+        
+        self.detect_java_btn = ModernButton("Auto-detect")
+        self.detect_java_btn.clicked.connect(self.detect_java)
+        java_path_layout.addWidget(self.detect_java_btn)
+        
+        java_path_layout.addStretch()
+        
+        java_form.addRow("", java_path_layout)
+        
+        # Java memory
+        self.java_memory_edit = ModernLineEdit(placeholder="2G")
+        java_form.addRow("Memory Allocation:", self.java_memory_edit)
+        
+        # Java arguments
+        self.java_args_edit = ModernLineEdit(placeholder="-XX:+UseG1GC")
+        java_form.addRow("Additional Arguments:", self.java_args_edit)
+        
+        java_layout.addLayout(java_form)
+        java_layout.addStretch(1)
         
         # Add tabs
         self.tab_widget.addTab(self.general_tab, "General")
-        self.tab_widget.addTab(self.download_tab, "Downloads")
+        self.tab_widget.addTab(self.java_tab, "Java")
         
         layout.addWidget(self.tab_widget)
         
-        # Button box
-        button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        layout.addWidget(button_box)
+        # Bottom buttons
+        buttons_layout = QHBoxLayout()
+        
+        self.cancel_btn = ModernButton("Cancel")
+        self.cancel_btn.clicked.connect(self.reject)
+        buttons_layout.addWidget(self.cancel_btn)
+        
+        self.save_btn = ModernButton("Save", True)
+        self.save_btn.clicked.connect(self.accept)
+        buttons_layout.addWidget(self.save_btn)
+        
+        layout.addLayout(buttons_layout)
         
     def load_settings(self):
-        """Load settings from configuration."""
-        # General settings
-        self.mc_dir_edit.setText(self.config.get("minecraft_directory", ""))
-        self.java_path_edit.setText(self.config.get("java_path", "java"))
+        """Load settings from config."""
+        # Server URL
+        server_url = self.config.get("server_url", "http://localhost:5000")
+        self.repo_url_edit.setText(server_url)
         
-        # Extract memory setting from Java args
-        java_args = self.config.get("java_args", "-Xmx2G -XX:+UseG1GC")
-        memory_setting = ""
-        additional_args = []
+        # Minecraft directory
+        mc_dir = self.config.get("minecraft_directory", "")
+        self.minecraft_dir_edit.setText(mc_dir)
+        
+        # Check for updates
+        check_updates = self.config.get("check_for_updates", True)
+        self.check_updates_cb.setChecked(check_updates)
+        
+        # Java settings
+        java_path = self.config.get("java_path", "java")
+        self.java_path_edit.setText(java_path)
+        
+        # Extract memory allocation from Java args
+        java_args = self.config.get("java_args", "-Xmx2G")
+        memory = "2G"
+        args = []
         
         for arg in java_args.split():
             if arg.startswith("-Xmx"):
-                memory_setting = arg[4:]  # Remove -Xmx prefix
+                memory = arg[4:]  # Remove "-Xmx" prefix
             else:
-                additional_args.append(arg)
+                args.append(arg)
                 
-        self.memory_edit.setText(memory_setting)
-        self.java_args_edit.setText(" ".join(additional_args))
-        
-        # Update settings
-        self.check_updates_cb.setChecked(self.config.get("check_for_updates", True))
-        self.check_modpack_updates_cb.setChecked(self.config.get("check_for_modpack_updates", True))
-        
-        # Download settings
-        self.max_threads_spin.setValue(self.config.get("max_download_threads", 3))
+        self.java_memory_edit.setText(memory)
+        self.java_args_edit.setText(" ".join(args))
         
     def save_settings(self):
-        """Save settings to configuration."""
-        # General settings
-        self.config.set("minecraft_directory", self.mc_dir_edit.text())
-        self.config.set("java_path", self.java_path_edit.text())
+        """Save settings to config."""
+        # Server URL
+        server_url = self.repo_url_edit.text().strip()
+        if server_url:
+            self.config.set("server_url", server_url)
+            
+            # Update repository URLs
+            repos = self.config.get("repositories", {})
+            for repo_id, repo_info in repos.items():
+                repo_info["url"] = server_url
+            self.config.set("repositories", repos)
+            
+        # Minecraft directory
+        mc_dir = self.minecraft_dir_edit.text().strip()
+        if mc_dir:
+            self.config.set("minecraft_directory", mc_dir)
+            
+        # Check for updates
+        self.config.set("check_for_updates", self.check_updates_cb.isChecked())
         
-        # Combine memory and additional args
-        memory = self.memory_edit.text()
+        # Java settings
+        java_path = self.java_path_edit.text().strip()
+        if java_path:
+            self.config.set("java_path", java_path)
+            
+        # Memory and Java args
+        memory = self.java_memory_edit.text().strip()
         if not memory.startswith("-Xmx"):
             memory = f"-Xmx{memory}"
             
-        java_args = [memory] + self.java_args_edit.text().split()
-        self.config.set("java_args", " ".join(java_args))
+        args = self.java_args_edit.text().strip()
+        java_args = memory
+        if args:
+            java_args = f"{memory} {args}"
+            
+        self.config.set("java_args", java_args)
         
-        # Update settings
-        self.config.set("check_for_updates", self.check_updates_cb.isChecked())
-        self.config.set("check_for_modpack_updates", self.check_modpack_updates_cb.isChecked())
-        
-        # Download settings
-        self.config.set("max_download_threads", self.max_threads_spin.value())
-        
-        # Save configuration
+        # Save all changes
         self.config.save()
         
     def accept(self):
-        """Handle dialog acceptance."""
+        """Override accept to save settings."""
         self.save_settings()
         super().accept()
         
     def browse_minecraft_dir(self):
-        """Open file dialog to browse for Minecraft directory."""
-        current_dir = self.mc_dir_edit.text()
-        if not current_dir or not os.path.exists(current_dir):
-            current_dir = os.path.expanduser("~")
+        """Browse for Minecraft directory."""
+        from PyQt6.QtWidgets import QFileDialog
+        
+        current_dir = self.minecraft_dir_edit.text()
+        if not current_dir:
+            # Default to home directory
+            from pathlib import Path
+            current_dir = str(Path.home())
             
         directory = QFileDialog.getExistingDirectory(
             self,
@@ -203,15 +353,121 @@ class SettingsDialog(QDialog):
         )
         
         if directory:
-            self.mc_dir_edit.setText(directory)
+            self.minecraft_dir_edit.setText(directory)
             
-    def auto_detect_memory(self):
-        """Auto-detect recommended memory allocation."""
-        memory_info = get_memory_info()
-        recommended_memory = calculate_recommended_memory(memory_info)
+    def browse_java_path(self):
+        """Browse for Java executable."""
+        from PyQt6.QtWidgets import QFileDialog
         
-        # Extract value from JVM format (e.g., "-Xmx4G" -> "4G")
-        if recommended_memory.startswith("-Xmx"):
-            recommended_memory = recommended_memory[4:]
+        current_path = self.java_path_edit.text()
+        current_dir = os.path.dirname(current_path) if current_path else ""
+        
+        if not current_dir:
+            # Default to a common location
+            if os.name == "nt":  # Windows
+                current_dir = "C:\\Program Files\\Java"
+            else:
+                current_dir = "/usr/bin"
+                
+        file_filter = "Java Executable (java.exe)" if os.name == "nt" else "Java Executable (java)"
+        
+        java_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Select Java Executable",
+            current_dir,
+            file_filter
+        )
+        
+        if java_path:
+            self.java_path_edit.setText(java_path)
             
-        self.memory_edit.setText(recommended_memory)
+    def detect_java(self):
+        """Auto-detect Java installation."""
+        try:
+            import subprocess
+            
+            # Try to run java -version
+            if os.name == "nt":  # Windows
+                proc = subprocess.run(["where", "java"], capture_output=True, text=True, check=False)
+                if proc.returncode == 0 and proc.stdout.strip():
+                    java_path = proc.stdout.splitlines()[0].strip()
+                    self.java_path_edit.setText(java_path)
+                    QMessageBox.information(self, "Java Detected", f"Found Java at: {java_path}")
+                    return
+            else:
+                proc = subprocess.run(["which", "java"], capture_output=True, text=True, check=False)
+                if proc.returncode == 0 and proc.stdout.strip():
+                    java_path = proc.stdout.strip()
+                    self.java_path_edit.setText(java_path)
+                    QMessageBox.information(self, "Java Detected", f"Found Java at: {java_path}")
+                    return
+                    
+            # If we get here, no Java was found
+            QMessageBox.warning(self, "Java Not Found", "Could not automatically detect Java installation.")
+            
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Error detecting Java: {str(e)}")
+            
+    def test_repository(self):
+        """Test connection to the repository."""
+        url = self.repo_url_edit.text().strip()
+        
+        if not url:
+            QMessageBox.warning(self, "Invalid URL", "Please enter a repository URL.")
+            return
+            
+        try:
+            import requests
+            
+            # Make sure the URL has http:// or https:// prefix
+            if not url.startswith(("http://", "https://")):
+                url = "http://" + url
+                self.repo_url_edit.setText(url)
+                
+            # Try to connect to the API endpoint
+            api_url = f"{url}/api/modpacks"
+            
+            self.test_repo_btn.setEnabled(False)
+            self.test_repo_btn.setText("Testing...")
+            
+            response = requests.get(api_url, timeout=5)
+            
+            self.test_repo_btn.setEnabled(True)
+            self.test_repo_btn.setText("Test Connection")
+            
+            # Check response
+            if response.status_code == 200:
+                try:
+                    modpacks = response.json()
+                    QMessageBox.information(
+                        self, 
+                        "Connection Successful", 
+                        f"Successfully connected to the repository. Found {len(modpacks)} modpacks."
+                    )
+                except Exception:
+                    QMessageBox.information(
+                        self, 
+                        "Connection Successful", 
+                        "Successfully connected to the repository, but could not parse the response."
+                    )
+            else:
+                QMessageBox.warning(
+                    self, 
+                    "Connection Failed", 
+                    f"Could not connect to the repository. Status code: {response.status_code}"
+                )
+                
+        except requests.exceptions.ConnectTimeout:
+            self.test_repo_btn.setEnabled(True)
+            self.test_repo_btn.setText("Test Connection")
+            QMessageBox.warning(self, "Connection Timeout", "Connection to the repository timed out.")
+            
+        except requests.exceptions.ConnectionError:
+            self.test_repo_btn.setEnabled(True)
+            self.test_repo_btn.setText("Test Connection")
+            QMessageBox.warning(self, "Connection Error", "Could not connect to the repository.")
+            
+        except Exception as e:
+            self.test_repo_btn.setEnabled(True)
+            self.test_repo_btn.setText("Test Connection")
+            QMessageBox.warning(self, "Error", f"Error testing repository: {str(e)}")
