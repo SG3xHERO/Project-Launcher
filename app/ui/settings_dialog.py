@@ -106,7 +106,7 @@ class SettingsDialog(QDialog):
         
     def init_ui(self):
         """Initialize user interface."""
-        self.setWindowTitle("Settings")
+        self.setWindowTitle("Project Launcher Settings")
         self.setMinimumWidth(500)
         self.setStyleSheet("""
             QDialog {

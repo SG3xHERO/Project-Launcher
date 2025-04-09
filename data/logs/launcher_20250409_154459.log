@@ -1,0 +1,5 @@
+2025-04-09 15:44:59,285 [INFO] Logging to data\logs\launcher_20250409_154459.log
+2025-04-09 15:44:59,359 [INFO] System: Windows 11
+2025-04-09 15:44:59,359 [INFO] Python: 3.13.3
+2025-04-09 15:44:59,360 [INFO] Starting Project Launcher Launcher...
+2025-04-09 15:44:59,405 [INFO] Configuration loaded from data\config.json

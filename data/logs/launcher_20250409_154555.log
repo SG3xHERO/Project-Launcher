@@ -1,0 +1,6 @@
+2025-04-09 15:45:55,226 [INFO] Logging to data\logs\launcher_20250409_154555.log
+2025-04-09 15:45:55,359 [INFO] System: Windows 11
+2025-04-09 15:45:55,360 [INFO] Python: 3.13.3
+2025-04-09 15:45:55,360 [INFO] Starting Project Launcher Launcher...
+2025-04-09 15:45:55,406 [INFO] Configuration loaded from data\config.json
+2025-04-09 15:45:55,579 [INFO] Java version: 1.8.0_441

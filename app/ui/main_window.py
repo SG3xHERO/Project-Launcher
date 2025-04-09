@@ -24,6 +24,7 @@ from PyQt6.QtGui import QIcon, QPixmap, QImage, QColor, QPalette
 from app.core.minecraft import MinecraftInstance
 from app.core.modpack import ModpackManager
 from app.core.repository import RepositoryManager
+from app.microsoft_auth_webengine import MicrosoftAuthManager
 
 
 class ModernButton(QPushButton):
@@ -208,7 +209,7 @@ class LoginWindow(QWidget):
         layout.setSpacing(20)
         
         # Title
-        title_label = QLabel("Minecraft Launcher")
+        title_label = QLabel("Project Launcher")
         title_label.setStyleSheet("font-size: 28px; font-weight: bold; color: white;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
@@ -531,7 +532,7 @@ class ModpackInstallWindow(QWidget):
         
         # Title
         title_label = QLabel(f"Installing {self.modpack.name}")
-        title_label.setStyleSheet("font-size: 24px; font-weight: bold; color: white;")
+        title_label.setStyleSheet("font-size: 28px; font-weight: bold; color: white;")
         title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title_label)
         
@@ -695,6 +696,7 @@ class MainWindow(QMainWindow):
         
         self.init_ui()
         self.load_style()
+        self.setup_microsoft_auth()
         
     def load_style(self):
         """Load application style."""
@@ -715,7 +717,7 @@ class MainWindow(QMainWindow):
         """)
         
         # Set icon
-        icon_path = os.path.join("app", "ui", "resources", "icon.png")
+        icon_path = os.path.join("app", "ui", "resources", "PL-logo.png")
         if os.path.exists(icon_path):
             self.setWindowIcon(QIcon(icon_path))
             
@@ -787,6 +789,54 @@ class MainWindow(QMainWindow):
         if success:
             # In a real implementation, this would update the modpack list
             self.modpack_list_window.load_modpacks()
+            
+    def setup_microsoft_auth(self):
+        self.ms_auth = MicrosoftAuthManager(self.config)
+        
+        # Add a sign-in button to your UI
+        self.ms_signin_button = QPushButton("Sign in with Microsoft")
+        self.ms_signin_button.clicked.connect(self.handle_microsoft_signin)
+        
+        # Add the button to an appropriate layout in your UI
+        # For example: self.some_layout.addWidget(self.ms_signin_button)
+
+    def handle_microsoft_signin(self):
+        if self.ms_auth.authenticate():
+            profile = self.ms_auth.get_minecraft_profile()
+            if profile:
+                # Update UI to show logged-in state
+                self.ms_signin_button.setText(f"Signed in as {profile['name']}")
+                # Do something with the authenticated user
+            else:
+                QMessageBox.warning(self, "Sign In Failed", 
+                                  "Could not retrieve Minecraft profile.")
+
+    def setup_minecraft_auth(self):
+        self.ms_auth = MicrosoftAuthManager(self.config)
+        
+        self.ms_signin_button = QPushButton("Sign in with Microsoft")
+        self.ms_signin_button.clicked.connect(self.handle_microsoft_signin)
+        
+        # Add button to your layout
+        # self.some_layout.addWidget(self.ms_signin_button)
+
+    def handle_microsoft_signin(self):
+        if self.ms_auth.authenticate():
+            # Check if user owns the game
+            if self.ms_auth.check_game_ownership():
+                profile = self.ms_auth.get_minecraft_profile()
+                if profile:
+                    self.ms_signin_button.setText(f"Signed in as {profile['name']}")
+                    # Store profile info
+                    self.config.minecraft_profile = profile
+                    self.config.save()
+                    QMessageBox.information(self, "Success", f"Successfully signed in as {profile['name']}")
+                else:
+                    QMessageBox.warning(self, "Error", "Could not retrieve Minecraft profile.")
+            else:
+                QMessageBox.warning(self, "Game Ownership", "This Microsoft account does not own Minecraft.")
+        else:
+            QMessageBox.warning(self, "Sign In Failed", "Could not sign in with Microsoft account.")
 
 
 # Import the application from PyQt6

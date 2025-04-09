@@ -1,0 +1,7 @@
+2025-04-09 16:00:14,604 [INFO] Logging to data\logs\launcher_20250409_160014.log
+2025-04-09 16:00:14,666 [INFO] System: Windows 11
+2025-04-09 16:00:14,667 [INFO] Python: 3.13.3
+2025-04-09 16:00:14,667 [INFO] Starting Project Launcher Launcher...
+2025-04-09 16:00:14,693 [INFO] Using ICO icon: C:\Users\benf\Documents\Launcher\Project-Launcher\app\ui\resources\PL-logo.ico
+2025-04-09 16:00:14,716 [INFO] Configuration loaded from data\config.json
+2025-04-09 16:00:14,860 [INFO] Java version: 1.8.0_441
