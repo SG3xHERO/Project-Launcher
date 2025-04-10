@@ -14,7 +14,8 @@ import time
 import threading
 from typing import Dict, Any, Optional, List, Callable
 
-from app.utils import is_java_installed, get_memory_info, calculate_recommended_memory
+from app.utils.java_utils import is_java_installed
+from app.utils.memory_utils import get_memory_info, calculate_recommended_memory
 
 
 class MinecraftInstance:
@@ -131,7 +132,7 @@ class MinecraftInstance:
             f"-Dminecraft.client.jar={os.path.join(self.minecraft_dir, 'versions', version, f'{version}.jar')}",
             "-cp", self._build_classpath(version, modpack_dir),
             "net.minecraft.client.main.Main",
-            "--username", "Player",
+            "--username", "Debug3",
             "--version", version,
             "--gameDir", game_dir,
             "--assetsDir", os.path.join(self.minecraft_dir, "assets"),

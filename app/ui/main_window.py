@@ -25,6 +25,7 @@ from app.core.minecraft import MinecraftInstance
 from app.core.modpack import ModpackManager
 from app.core.repository import RepositoryManager
 from app.microsoft_auth_webengine import MicrosoftAuthManager
+from app.utils.minecraft_utils import get_player_head
 
 
 class ModernButton(QPushButton):
@@ -136,7 +137,7 @@ class ModpackItem(QFrame):
         
         # Try to load icon
         icon_path = modpack.icon_path
-        if icon_path and os.path.exists(icon_path):
+        if (icon_path and os.path.exists(icon_path)):
             pixmap = QPixmap(icon_path)
         else:
             # Use default icon
@@ -245,7 +246,7 @@ class LoginWindow(QWidget):
         
         # Skip login button (for development/testing)
         self.skip_btn = ModernButton("Skip Login (Offline Mode)")
-        self.skip_btn.clicked.connect(lambda: self.login_success.emit("Player", "offline"))
+        self.skip_btn.clicked.connect(lambda: self.login_success.emit("Offline Mode", "offline"))
         layout.addWidget(self.skip_btn)
         
         # Error message
@@ -278,9 +279,32 @@ class LoginWindow(QWidget):
     
     def microsoft_login(self):
         """Handle Microsoft login button click."""
-        # In a real implementation, this would open Microsoft OAuth flow
-        # For now, just simulate a successful login
-        self.login_success.emit("Player", "ms_token")
+        self.ms_login_btn.setEnabled(False)
+        self.ms_login_btn.setText("Signing in...")
+        
+        from app.microsoft_auth_webengine import MicrosoftAuthManager
+        auth_manager = MicrosoftAuthManager()
+        
+        # Check for cached login
+        cached_username = auth_manager.get_cached_username()
+        if cached_username:
+            self.login_success.emit(cached_username, "ms_token")
+            self.ms_login_btn.setEnabled(True)
+            self.ms_login_btn.setText("Sign in with Microsoft")
+            return
+        
+        # Perform authentication
+        if auth_manager.authenticate():
+            profile = auth_manager.get_minecraft_profile()
+            if profile:
+                self.login_success.emit(profile["name"], "ms_token")
+            else:
+                self.show_error("Could not retrieve Minecraft profile")
+        else:
+            self.show_error("Microsoft authentication failed or was cancelled")
+        
+        self.ms_login_btn.setEnabled(True)
+        self.ms_login_btn.setText("Sign in with Microsoft")
     
     def show_error(self, message):
         """Show error message."""
@@ -320,7 +344,7 @@ class ModpackListWindow(QWidget):
         # Username and logout
         username_layout = QHBoxLayout()
         
-        self.username_label = QLabel("Player")
+        self.username_label = QLabel("Player2")
         self.username_label.setStyleSheet("color: #BFC1C7; font-size: 15px;")
         username_layout.addWidget(self.username_label)
         
@@ -750,18 +774,65 @@ class MainWindow(QMainWindow):
         self.stacked_widget.setCurrentIndex(0)
         
         main_layout.addWidget(self.stacked_widget)
+
+        # Create user profile section
+        self.avatar_label = QLabel()
+        self.avatar_label.setFixedSize(40, 40)
+        self.avatar_label.setScaledContents(True)
+
+        self.username_label = QLabel("BaselineLogin")  # Default text
+        self.username_label.setStyleSheet("font-weight: bold;")
+
+        # Add them to your layout
+        profile_layout = QHBoxLayout()
+        profile_layout.addWidget(self.avatar_label)
+        profile_layout.addWidget(self.username_label)
+        profile_layout.addStretch()  # Push everything to the left
+
+        # Add to your main layout
+        main_layout.addLayout(profile_layout)
         
     def on_login_success(self, username, session_token):
         """Handle successful login."""
         self.username = username
         self.session_token = session_token
-        
+
+        # Log the username
+        logging.info(f"Username from login: {username}")
+
+        # Update username label
+        self.username_label.setText(username)
+
+        # Try to get the player avatar
+        if hasattr(self.login_window, 'ms_auth') and self.login_window.ms_auth:
+            profile = self.login_window.ms_auth.get_minecraft_profile()
+            if profile:
+                # Log the profile data
+                logging.info(f"Fetched Minecraft profile: {profile}")
+
+                # Update username
+                self.username_label.setText(profile.get('name', 'Debug4'))
+
+                # Fetch and update avatar using get_player_head
+                avatar = get_player_head(uuid=profile.get('id'))
+                if avatar:
+                    self.avatar_label.setPixmap(avatar)
+                else:
+                    # Set default avatar if no avatar is available
+                    default_avatar = os.path.join("app", "ui", "resources", "default_avatar.png")
+                    if os.path.exists(default_avatar):
+                        self.avatar_label.setPixmap(QPixmap(default_avatar))
+            else:
+                logging.warning("Failed to fetch Minecraft profile.")
+        else:
+            logging.warning("Microsoft authentication object not found.")
+
         # Update username in modpack list
         self.modpack_list_window.set_username(username)
-        
+
         # Load modpacks
         self.modpack_list_window.load_modpacks()
-        
+
         # Switch to modpack list screen
         self.stacked_widget.setCurrentIndex(1)
         
@@ -801,15 +872,54 @@ class MainWindow(QMainWindow):
         # For example: self.some_layout.addWidget(self.ms_signin_button)
 
     def handle_microsoft_signin(self):
-        if self.ms_auth.authenticate():
-            profile = self.ms_auth.get_minecraft_profile()
-            if profile:
-                # Update UI to show logged-in state
-                self.ms_signin_button.setText(f"Signed in as {profile['name']}")
-                # Do something with the authenticated user
+        """Handle Microsoft sign-in button click."""
+        try:
+            # Disable the button while signing in
+            self.ms_signin_button.setEnabled(False)
+            self.ms_signin_button.setText("Signing in...")
+            
+            # Try to authenticate
+            if self.ms_auth.authenticate():
+                profile = self.ms_auth.get_minecraft_profile()
+                if profile:
+                    # Update UI to show logged-in state
+                    username = profile['name']
+                    self.username = username
+                    self.session_token = "ms_token"
+                    
+                    # Update the profile UI components
+                    self.username_label.setText(username)
+                    
+                    # Set the avatar if available
+                    if 'avatar' in profile and profile['avatar']:
+                        self.avatar_label.setPixmap(profile['avatar'])
+                    else:
+                        # Fallback to default avatar
+                        default_avatar = os.path.join("app", "ui", "resources", "default_avatar.png")
+                        self.avatar_label.setPixmap(QPixmap(default_avatar))
+                    
+                    # Store user info in config
+                    self.config.set("username", self.username)
+                    self.config.set("auth_type", "microsoft")
+                    self.config.save()
+                    
+                    # Show success message and proceed to main screen
+                    self.on_login_success(username, "ms_token")
+                else:
+                    QMessageBox.warning(self, "Sign In Failed", 
+                                      "Could not retrieve Minecraft profile.")
             else:
-                QMessageBox.warning(self, "Sign In Failed", 
-                                  "Could not retrieve Minecraft profile.")
+                # User may have cancelled, so don't show error message
+                pass
+        except Exception as e:
+            logging.error(f"Microsoft authentication error: {e}")
+            QMessageBox.warning(self, "Authentication Error", 
+                              f"An error occurred during authentication: {str(e)}")
+        finally:
+            # Re-enable the button regardless of outcome
+            self.ms_signin_button.setEnabled(True)
+            if not self.username:
+                self.ms_signin_button.setText("Sign in with Microsoft")
 
     def setup_minecraft_auth(self):
         self.ms_auth = MicrosoftAuthManager(self.config)
@@ -837,6 +947,26 @@ class MainWindow(QMainWindow):
                 QMessageBox.warning(self, "Game Ownership", "This Microsoft account does not own Minecraft.")
         else:
             QMessageBox.warning(self, "Sign In Failed", "Could not sign in with Microsoft account.")
+
+    def update_user_profile(self, user_info):
+        """Update the UI with user profile information"""
+        if not user_info:
+            # Default/fallback display
+            self.username_label.setText("Player4")
+            self.avatar_label.setPixmap(QPixmap("app/ui/resources/default_avatar.png"))
+            return
+        
+        # Set username
+        username = user_info.get('username', 'Player5')
+        self.username_label.setText(username)
+        
+        # Set avatar
+        avatar = user_info.get('avatar')
+        if (avatar):
+            self.avatar_label.setPixmap(avatar)
+        else:
+            # Fallback to default avatar
+            self.avatar_label.setPixmap(QPixmap("app/ui/resources/default_avatar.png"))
 
 
 # Import the application from PyQt6

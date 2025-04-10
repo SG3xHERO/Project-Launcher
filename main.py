@@ -8,14 +8,23 @@ A lightweight, user-friendly Project Launcher with modpack management capabiliti
 
 import sys
 import os
+
+# Add the current directory to Python path to fix import issues
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import logging
 import subprocess
+# Import Qt WebEngine attributes BEFORE creating QApplication instance
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QSettings, QDir, QSize
 from PyQt6.QtGui import QIcon
 from app.ui.main_window import MainWindow
 from app.config import Config
 from app.utils import setup_logging, ensure_directories
+
+# Set Qt WebEngine attributes BEFORE QApplication is created
+QApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
 
 # Handle Windows-specific taskbar icon setup BEFORE QApplication is created
 if sys.platform == "win32":

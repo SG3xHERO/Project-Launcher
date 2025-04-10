@@ -46,17 +46,8 @@ def setup_logging(log_level=logging.INFO):
 
 def ensure_directories():
     """Ensure required directories exist."""
-    directories = [
-        os.path.join("data"),
-        os.path.join("data", "minecraft"),
-        os.path.join("data", "modpacks"),
-        os.path.join("data", "temp"),
-        os.path.join("data", "logs")
-    ]
-    
-    for directory in directories:
-        os.makedirs(directory, exist_ok=True)
-        logging.debug(f"Ensured directory: {directory}")
+    os.makedirs(os.path.expanduser("~/.minecraft_launcher"), exist_ok=True)
+    # Add other required directories here
 
 
 def is_java_installed() -> bool:
