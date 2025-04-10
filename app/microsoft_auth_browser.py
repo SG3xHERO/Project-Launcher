@@ -8,14 +8,7 @@ from PyQt6.QtCore import Qt, QUrl, pyqtSignal
 from PyQt6.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QMessageBox, QDialogButtonBox
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWebEngineCore import QWebEngineProfile
-
-def setup_qt_webengine():
-    """
-    Set up the required Qt WebEngine settings.
-    Must be called before creating a QApplication instance.
-    """
-    from PyQt6.QtCore import QCoreApplication
-    QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
+from app.utils.webengine_utils import setup_qt_webengine
 
 class BrowserAuthDialog(QDialog):
     """Dialog that displays the Microsoft login page and captures the authorization code."""
@@ -56,6 +49,10 @@ class BrowserAuthDialog(QDialog):
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
+        
+    def get_auth_code(self):
+        """Return the authorization code after successful authentication."""
+        return self.auth_code
         
     def _build_auth_url(self):
         """Build the Microsoft OAuth URL."""

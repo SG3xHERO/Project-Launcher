@@ -16,7 +16,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QLabel, QComboBox, QListWidget,
     QListWidgetItem, QMessageBox, QProgressBar, QFrame,
     QSplitter, QStackedWidget, QTabWidget, QFileDialog,
-    QMenu, QMenuBar, QScrollArea, QLineEdit  # Add QLineEdit here
+    QMenu, QMenuBar, QScrollArea, QLineEdit, QApplication  # Added QApplication here
 )
 from PyQt6.QtCore import Qt, QSize, pyqtSignal, QThread, pyqtSlot
 from PyQt6.QtGui import QIcon, QPixmap, QImage, QColor, QPalette
@@ -197,8 +197,9 @@ class LoginWindow(QWidget):
     
     login_success = pyqtSignal(str, str)  # username, session_token
     
-    def __init__(self, parent=None):
+    def __init__(self, config, parent=None):
         super().__init__(parent)
+        self.config = config  # Store the config reference
         self.init_ui()
         
     def init_ui(self):
@@ -278,33 +279,54 @@ class LoginWindow(QWidget):
         self.login_success.emit(username, "dummy_token")
     
     def microsoft_login(self):
-        """Handle Microsoft login button click."""
-        self.ms_login_btn.setEnabled(False)
-        self.ms_login_btn.setText("Signing in...")
-        
-        from app.microsoft_auth_webengine import MicrosoftAuthManager
-        auth_manager = MicrosoftAuthManager()
-        
-        # Check for cached login
-        cached_username = auth_manager.get_cached_username()
-        if cached_username:
-            self.login_success.emit(cached_username, "ms_token")
-            self.ms_login_btn.setEnabled(True)
-            self.ms_login_btn.setText("Sign in with Microsoft")
-            return
-        
-        # Perform authentication
-        if auth_manager.authenticate():
-            profile = auth_manager.get_minecraft_profile()
-            if profile:
-                self.login_success.emit(profile["name"], "ms_token")
+        """Handle Microsoft login and transition to main menu on success."""
+        try:
+            logging.info("Starting Microsoft login process")
+            from app.auth.microsoft_auth import MicrosoftAuthManager
+            
+            auth_manager = MicrosoftAuthManager(config=self.config)
+            
+            # Show a "Logging in..." message in the error label instead of statusBar
+            self.error_label.setStyleSheet("color: #4285F4; font-size: 14px;") # Blue color for info
+            self.error_label.setText("Logging in with Microsoft...")
+            self.error_label.setVisible(True)
+            QApplication.processEvents()  # Update UI
+            
+            if auth_manager.authenticate():
+                logging.info("Authentication successful, retrieving profile...")
+                profile = auth_manager.get_minecraft_profile()
+                
+                if profile:
+                    username = profile['name']
+                    logging.info(f"Successfully logged in as {username}")
+                    
+                    # Store the profile data
+                    self.config.set('minecraft', 'username', username)
+                    self.config.set('minecraft', 'uuid', profile['id'])
+                    self.config.save()
+                    
+                    # Emit login success signal
+                    self.login_success.emit(username, "ms_token")
+                    
+                    return True
+                else:
+                    logging.error("Profile retrieval failed")
+                    self.show_error("Authentication succeeded but couldn't retrieve your Minecraft profile.")
+                    return False
             else:
-                self.show_error("Could not retrieve Minecraft profile")
-        else:
-            self.show_error("Microsoft authentication failed or was cancelled")
-        
-        self.ms_login_btn.setEnabled(True)
-        self.ms_login_btn.setText("Sign in with Microsoft")
+                logging.warning("Authentication failed or was cancelled")
+                self.show_error("Authentication was cancelled or failed.")
+                return False
+                
+        except Exception as e:
+            logging.error(f"Microsoft login error: {e}")
+            logging.exception("Login exception details:")
+            self.show_error(f"Failed to authenticate: {str(e)}")
+            return False
+        finally:
+            # Clear the message if needed
+            if self.error_label.text() == "Logging in with Microsoft...":
+                self.error_label.setVisible(False)
     
     def show_error(self, message):
         """Show error message."""
@@ -760,7 +782,7 @@ class MainWindow(QMainWindow):
         self.stacked_widget = QStackedWidget()
         
         # Login screen
-        self.login_window = LoginWindow()
+        self.login_window = LoginWindow(self.config)
         self.login_window.login_success.connect(self.on_login_success)
         self.stacked_widget.addWidget(self.login_window)
         
@@ -968,7 +990,35 @@ class MainWindow(QMainWindow):
             # Fallback to default avatar
             self.avatar_label.setPixmap(QPixmap("app/ui/resources/default_avatar.png"))
 
+    def open_login_dialog(self):
+        from app.ui.login_window import LoginWindow
+        login_dialog = LoginWindow(config=self.config, parent=self)
+        # ...rest of method...
 
-# Import the application from PyQt6
-from PyQt6.QtWidgets import QApplication, QScrollArea, QLineEdit
-from app.core.modpack import Modpack
+    def show_main_menu(self):
+        """Switch UI to main menu after successful login."""
+        # Hide login widgets if any
+        if hasattr(self, 'login_widget'):
+            self.login_widget.hide()
+        
+        # Show main menu widgets
+        self.stacked_widget.setCurrentIndex(1)  # Assuming index 1 is your main menu page
+        
+        # Update UI with username
+        username = self.config.get('minecraft', 'username')
+        if username:
+            self.username_label.setText(f"Welcome, {username}")
+            
+        # Update any other UI elements that should change after login
+        self.refresh_modpack_list()  # If you have this method
+        
+        logging.info("Switched to main menu view")
+
+    def microsoft_login(self, force_new=False):
+        """Handle Microsoft login with option to force new login."""
+        # If force_new is True, clear cached tokens first
+        if force_new:
+            self._clear_token_cache()
+        # Rest of the login code...
+
+
