@@ -2,7 +2,6 @@
 
 A lightweight, user-friendly Minecraft launcher with comprehensive modpack management capabilities, designed to make modded Minecraft more accessible to everyone.
 
-![Project Launcher Screenshot](docs/images/screenshot.png)
 
 ## Features
 
