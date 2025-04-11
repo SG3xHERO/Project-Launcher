@@ -1,8 +1,8 @@
 {
     "minecraft_directory": "C:\\Users\\benf\\AppData\\Roaming\\.minecraft",
     "minecraft_version": "1.21.5",
-    "java_path": "C:\\Program Files\\Java\\jre1.8.0_441\\bin\\javaw.exe",
-    "java_args": "-Xmx15G -XX:+UseG1GC -XX:+ParallelRefProcEnabled",
+    "java_path": "C:\\Program Files (x86)\\Common Files\\Oracle\\Java\\java8path\\java.exe",
+    "java_args": "-Xmx6 -XX:+UseG1GC -XX:+ParallelRefProcEnabled",
     "modpack_repositories": [
         "https://example.com/modpacks/official"
     ],

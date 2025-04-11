@@ -9,6 +9,7 @@ import os
 import json
 import logging
 from pathlib import Path
+from PyQt6.QtCore import QObject, pyqtSignal, Qt, QTimer
 
 
 class Config:
@@ -79,7 +80,11 @@ class Config:
             "check_for_updates": True,
             "max_download_threads": 3,
             "launcher_theme": "default",
-            "first_run": True
+            "first_run": True,
+            "microsoft_auth": {
+                "client_id": "4673b348-3efa-4f6f-9b5b-8eb15dab474f",  # Prismarine's public client ID
+                "redirect_uri": "https://login.microsoftonline.com/common/oauth2/nativeclient"
+            }
         }
     
     def get(self, key, default=None):

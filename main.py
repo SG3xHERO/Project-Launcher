@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 """
-Project Launcher Launcher
+Project Launcher Main Script
 A lightweight, user-friendly Project Launcher with modpack management capabilities.
+Updated with minecraft-launcher-lib integration.
 """
 
 import sys
@@ -14,8 +15,6 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import logging
 import subprocess
-# Import from the new location
-from app.utils.webengine_utils import setup_qt_webengine
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QSettings, QDir, QSize
@@ -23,6 +22,11 @@ from PyQt6.QtGui import QIcon
 from app.ui.main_window import MainWindow
 from app.config import Config
 from app.utils import setup_logging, ensure_directories
+
+# Import new modules with minecraft-launcher-lib integration
+from app.auth.microsoft_auth_lib import AuthenticationManager
+from app.core.launcher_integration import MinecraftLauncher
+from app.core.modpack_loader import ModpackManager
 
 # Handle Windows-specific taskbar icon setup BEFORE QApplication is created
 if sys.platform == "win32":
@@ -46,7 +50,8 @@ def main():
     setup_logging()
     logging.info("Starting Project Launcher...")
 
-    # Call setup function BEFORE creating QApplication
+    # Setup WebEngine if necessary
+    from app.utils.webengine_utils import setup_qt_webengine
     setup_qt_webengine()
 
     # Create QApplication instance - ONLY ONCE
@@ -91,9 +96,26 @@ def main():
         logging.info("No configuration found. Creating default configuration.")
         config.create_default()
         config.save()
+    
+    # Before creating main window
+    if not hasattr(config, "allow_offline_mode") or config.allow_offline_mode is None:
+        config.allow_offline_mode = True
+        config.save()
+    
+    # Setup authentication manager
+    auth_manager = AuthenticationManager(config)
 
-    # Create main window
-    main_window = MainWindow(config)
+    # Try to load cached authentication
+    auth_manager.load_cached_auth()
+    
+    # Setup Minecraft launcher
+    minecraft_launcher = MinecraftLauncher(config, auth_manager)
+    
+    # Setup modpack manager
+    modpack_manager = ModpackManager(config, minecraft_launcher)
+
+    # Create main window with new dependencies
+    main_window = MainWindow(config, auth_manager, minecraft_launcher, modpack_manager)
     
     # Also set icon explicitly on main window
     if icon_path:

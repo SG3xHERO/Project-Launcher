@@ -17,7 +17,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QSize, pyqtSignal
 from PyQt6.QtGui import QIcon, QPixmap
 
-from app.core.modpack import Modpack
+from app.core.modpack_loader import Modpack
 from app.core.mods import Mod
 
 
@@ -344,6 +344,40 @@ class ModpackManagerWidget(QWidget):
             item.setData(Qt.ItemDataRole.UserRole, os.path.join(resource_dir, file))
             self.resource_list.addItem(item)
             
+    def load_modpacks(self):
+        """Load modpacks."""
+        self.modpack_list.clear()
+        self.modpack = None
+        self.mod_list.clear()
+        
+        # Load installed modpacks
+        installed_modpacks = self.modpack_manager.get_installed_modpacks()
+        for modpack in installed_modpacks:
+            self.add_modpack_to_list(modpack, is_installed=True)
+        
+        # Load server modpacks
+        server_modpacks = self.modpack_manager.load_server_modpacks()
+        for modpack in server_modpacks:
+            # Check if this modpack is already installed
+            is_installed = any(imp.id == modpack.id for imp in installed_modpacks)
+            self.add_modpack_to_list(modpack, is_installed=is_installed)
+        
+        # Update counts
+        self.modpack_count_label.setText(f"Modpacks: {self.modpack_list.count()}")
+        
+    def add_modpack_to_list(self, modpack, is_installed=False):
+        """Add modpack to list."""
+        item = QListWidgetItem()
+        item.setText(f"{modpack.name} ({modpack.version})")
+        item.setData(Qt.ItemDataRole.UserRole, modpack)
+        
+        if is_installed:
+            item.setIcon(QIcon("icons/check.png"))  # Adjust icon path as needed
+        elif modpack.is_server_pack:
+            item.setIcon(QIcon("icons/download.png"))  # Adjust icon path as needed
+        
+        self.modpack_list.addItem(item)
+        
     def on_mod_selected(self, item):
         """Handle mod selection.
         
